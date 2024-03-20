@@ -1,0 +1,36 @@
+- name: Install Kong Mesh
+  hosts: localhost
+  tasks:
+    - name: Update helm repo
+      kubernetes.core.helm_repository:
+        name: kong-mesh
+        force_update: yes
+        state: present
+        url: https://kong.github.io/kong-mesh-charts
+      register: helm_repo_update
+      ignore_errors: yes
+
+    - name: Fail update on unexpected
+      ansible.builtin.fail:
+        msg: "Failed to update helm repo {{ helm_repo_update }}"
+      when: helm_repo_update.failed
+
+    - name: Install Kong Mesh
+      kubernetes.core.helm:
+        name: kong-mesh
+        chart_ref: kong-mesh/kong-mesh
+        release_namespace: kong-mesh-system
+        release_name: kong-mesh-system
+        create_namespace: yes
+        # values: "{{ lookup('file', 'kong-mesh-values.yaml') }}"
+        state: present
+        values:
+          kuma: 
+            global:
+              image:
+                tag: 2.6.2
+              namespace: kong-mesh-system
+          controlPlane:
+            mode: standalone
+      register: helm_install
+      ignore_errors: yes
